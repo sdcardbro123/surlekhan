@@ -1,54 +1,53 @@
 import numpy as np
 import librosa
 import os
-def detect_notes_by_chunk(filename, dur=0.5, sr=44100):
-    y, sr = librosa.load(filename, sr=sr)
-    samples_per_chunk = int(dur * sr)
-    total_chunks = len(y) // samples_per_chunk
+
+def detectnotesbychunk(filename, dur=0.5, sr=44100):
+    audio, sr = librosa.load(filename, sr=sr)
+    samples = int(dur * sr)
+    chunks = len(audio) // samples
     notes = []
 
-    for i in range(total_chunks):
-        chunk = y[i * samples_per_chunk:(i + 1) * samples_per_chunk]
-        if len(chunk) < samples_per_chunk:
-            continue  # Skip last short chunk
+    for i in range(chunks):
+        chunk = audio[i * samples:(i + 1) * samples]
+        if len(chunk) < samples:
+            continue
 
-        # Apply FFT
         fft = np.fft.fft(chunk)
-        freqs = np.fft.fftfreq(len(chunk), 1/sr)
-        magnitudes = np.abs(fft)
+        freqs = np.fft.fftfreq(len(chunk), 1 / sr)
+        mags = np.abs(fft)
 
-        # Use only the positive frequencies
         half = len(freqs) // 2
         freqs = freqs[:half]
-        magnitudes = magnitudes[:half]
+        mags = mags[:half]
 
-        # Find peak frequency
-        peak_idx = np.argmax(magnitudes)
-        peak_freq = freqs[peak_idx]
+        peak = freqs[np.argmax(mags)]
 
-        # Convert to note name
-        if peak_freq > 0:
-            note = librosa.hz_to_note(peak_freq)
-            notes.append(note)
+        if peak > 0:
+            notes.append(librosa.hz_to_note(peak))
         else:
             notes.append(None)
 
     return notes
-notes = detect_notes_by_chunk("binoutput.wav", dur=0.5)
-file = ''
+
+audiopath = input("Enter wav file path: ")
+notes = detectnotesbychunk(audiopath, dur=0.5)
+
+filedata = ""
 for note in notes:
     if note == "C4":
-        file += '0'
+        filedata += "0"
     elif note == "C5":
-        file += '1'
+        filedata += "1"
 
-def binary(filepath):
-    if not os.path.isfile(filepath):
-        raise FileNotFoundError(f"No such file: {filepath}")
-    with open(filepath, 'rb') as f:
-        byte_data = f.read()
-    return ''.join(format(byte, '08b') for byte in byte_data)
-x = r"C:\Users\s dhar\Desktop\sad.txt"
-bin_data = binary(x)
-if file == bin_data:
-    print("yeeeeeeeeeeeeeeeeeehaw")
+def binarytotext(binstring, outpath):
+    bytesdata = []
+    for i in range(0, len(binstring), 8):
+        byte = binstring[i:i + 8]
+        if len(byte) == 8:
+            bytesdata.append(int(byte, 2))
+    with open(outpath, "wb") as f:
+        f.write(bytes(bytesdata))
+
+outputpath = "recovered.txt"
+binarytotext(filedata, outputpath)
